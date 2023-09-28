@@ -18,6 +18,7 @@ class TodoListApiView(APIView):
 
         todos = Station.objects.all()
         print(todos)
+        print(todos)
         filtered_queryset = self.filter_queryset(todos)
         serializer = TodoSerializer(filtered_queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
