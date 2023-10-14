@@ -86,13 +86,14 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'gis',
-        'USER': '',
-        'PASSWORD': '',
-        'HOST': 'localhost',
+        'USER': 'dj',
+        'PASSWORD': 'password',
+        'HOST': 'postgis',
         'PORT': '5432'
     }
 }
 
+ALLOWED_HOSTS = ["*"]
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
