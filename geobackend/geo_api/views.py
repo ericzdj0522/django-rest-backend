@@ -5,6 +5,31 @@ from rest_framework import permissions
 from .models import Station, EU_Station, AP_Station
 from .serializers import TodoSerializer, EUSerializer, APSerializer
 from django_filters import rest_framework as filters
+from django.contrib.gis.geos import Point
+from django.contrib.gis.db.models.functions import Distance
+from django.http import JsonResponse
+
+#Nearest point of interest view
+def find_nearest_point_of_interest(request):
+    if request.method == 'GET':
+        try:
+            latitude = float(request.GET.get('latitude'))
+            longitude = float(request.GET.get('longitude'))
+            
+            # Create a Point object representing the given location
+            location = Point(longitude, latitude, srid=4326)
+
+            # Query the PointOfInterest model and annotate each object with its distance to the given location
+            nearest_point = Station.objects.annotate(distance=Distance('geom', location)).order_by('distance').first()
+
+            if nearest_point:
+                return JsonResponse({'name': nearest_point.station, 'distance': nearest_point.distance.km, 'status': nearest_point.status})
+            else:
+                return JsonResponse({'error': 'No points of interest found'})
+        except ValueError:
+            return JsonResponse({'error': 'Invalid latitude or longitude'})
+    else:
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 
 class TodoListApiView(APIView):
@@ -40,6 +65,8 @@ class TodoListApiView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    
 
     def filter_queryset(self, queryset):
     # Get the query parameters from the request
