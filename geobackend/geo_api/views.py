@@ -9,7 +9,7 @@ from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from django.http import JsonResponse
 
-#Nearest point of interest view
+#Create API endpoint function for finding nearest station for POI
 def find_nearest_point_of_interest(request):
     if request.method == 'GET':
         try:
@@ -170,4 +170,36 @@ class APListApiView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class RTKListApiView(APIView):
+     # add permission to check if user is authenticated
+    permission_classes = [permissions.IsAuthenticated]
 
+    # 1. List all
+    
+    def get(self, request, *args, **kwargs):
+        # List all the todo items for given requested user
+        todos = Station.objects.all()
+        #filtered_queryset = self.filter_queryset(todos)
+        #serializer = TodoSerializer(todos, many=True)
+        result = self.find_nearest_point_of_interest(request)
+        return Response(result, status=status.HTTP_200_OK)
+
+    def find_nearest_point_of_interest(self, request):
+        try:
+            latitude = float(request.GET.get('latitude'))
+            longitude = float(request.GET.get('longitude'))
+            
+            # Create a Point object representing the given location
+            location = Point(longitude, latitude, srid=4326)
+
+            # Query the PointOfInterest model and annotate each object with its distance to the given location
+            nearest_point = Station.objects.annotate(distance=Distance('geom', location)).order_by('distance').first()
+            result = {'name': nearest_point.station, 'distance': nearest_point.distance.km, 'status': nearest_point.status}
+
+
+            if nearest_point:
+                return result
+            else:
+                return {'error': 'No points of interest found'}
+        except ValueError:
+            return {'error': 'Invalid latitude or longitude'}
