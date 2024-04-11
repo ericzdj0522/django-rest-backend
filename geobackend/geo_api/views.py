@@ -8,6 +8,9 @@ from django_filters import rest_framework as filters
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from django.http import JsonResponse
+from geopy.geocoders import Nominatim
+import certifi
+import ssl
 
 #Create API endpoint function for finding nearest station for POI
 def find_nearest_point_of_interest(request):
@@ -30,6 +33,8 @@ def find_nearest_point_of_interest(request):
             return JsonResponse({'error': 'Invalid latitude or longitude'})
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
 
 
 class TodoListApiView(APIView):
@@ -170,6 +175,7 @@ class APListApiView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+#API view for nearest RTK station
 class RTKListApiView(APIView):
      # add permission to check if user is authenticated
     permission_classes = [permissions.IsAuthenticated]
@@ -203,3 +209,25 @@ class RTKListApiView(APIView):
                 return {'error': 'No points of interest found'}
         except ValueError:
             return {'error': 'Invalid latitude or longitude'}
+
+
+#API view for geocoding function
+class GeocodeAPIView(APIView):
+    # add permission to check if user is authenticated
+    permission_classes = [permissions.IsAuthenticated]
+
+    # 1. List all
+    
+    def get(self, request, format=None):
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+
+        address = request.query_params.get('address')
+        if not address:
+            return Response({'error': 'Address parameter is required'}, status=400)
+
+        geolocator = Nominatim(user_agent="my_geocoder", ssl_context=ssl_context)
+        location = geolocator.geocode(address)
+        if location:
+            return Response({'latitude': location.latitude, 'longitude': location.longitude})
+        else:
+            return Response({'error': 'Geocoding failed'}, status=500)
