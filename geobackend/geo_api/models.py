@@ -52,3 +52,10 @@ class AP_Station(models.Model):
     rover = models.CharField(max_length=100, null=True)
     stationtype = models.CharField(max_length=100, null=True)
     status = models.CharField(max_length=100, null=True)
+
+class Controlpoints_NA(models.Model):
+    id = models.CharField(max_length=100, primary_key=True)
+    geom = models.PointField(srid=4326, null=True)
+    longitude = models.CharField(max_length=100, null=True)
+    latitude = models.CharField(max_length=100, null=True)
+    count = models.CharField(max_length=100, null=True)

@@ -2,8 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
-from .models import Station, EU_Station, AP_Station
-from .serializers import TodoSerializer, EUSerializer, APSerializer
+from .models import Station, EU_Station, AP_Station, Controlpoints_NA
+from .serializers import TodoSerializer, EUSerializer, APSerializer, CPSerializer
 from django_filters import rest_framework as filters
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
@@ -49,8 +49,9 @@ class TodoListApiView(APIView):
         todos = Station.objects.all()
         print(todos)
         print(todos)
-        filtered_queryset = self.filter_queryset(todos)
-        serializer = TodoSerializer(filtered_queryset, many=True)
+        todos = Station.objects.filter(stationtype='integrity')
+        #filtered_queryset = self.filter_queryset(todos)
+        serializer = TodoSerializer(todos, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 2. Create
@@ -219,6 +220,7 @@ class GeocodeAPIView(APIView):
     # 1. List all
     
     def get(self, request, format=None):
+        # Specify the path to the CA certificates bundle
         ssl_context = ssl.create_default_context(cafile=certifi.where())
 
         address = request.query_params.get('address')
@@ -227,7 +229,79 @@ class GeocodeAPIView(APIView):
 
         geolocator = Nominatim(user_agent="my_geocoder", ssl_context=ssl_context)
         location = geolocator.geocode(address)
+
+        #Find nearest station to specific station
+        result = self.find_nearest_point_of_interest(location.longitude, location.latitude)
+        return Response(result, status=status.HTTP_200_OK)
+        '''
         if location:
             return Response({'latitude': location.latitude, 'longitude': location.longitude})
         else:
             return Response({'error': 'Geocoding failed'}, status=500)
+        '''
+
+    def find_nearest_point_of_interest(self, longitude, latitude):
+        try:
+            # Create a Point object representing the given location
+            location = Point(longitude, latitude, srid=4326)
+
+            # Query the PointOfInterest model and annotate each object with its distance to the given location
+            nearest_point = Station.objects.annotate(distance=Distance('geom', location)).order_by('distance').first()
+            result = {'name': nearest_point.station, 'distance': nearest_point.distance.km, 'status': nearest_point.status}
+
+
+            if nearest_point:
+                return result
+            else:
+                return {'error': 'No points of interest found'}
+        except ValueError:
+            return {'error': 'Invalid latitude or longitude'}
+
+
+class ControlpointsApiView(APIView):
+    # add permission to check if user is authenticated
+    permission_classes = [permissions.IsAuthenticated]
+
+    # 1. List all
+    
+    def get(self, request, *args, **kwargs):
+        # List all the todo items for given requested user
+        self.CPpoints_analysis(request)
+        todos = Controlpoints_NA.objects.all()
+        serializer = CPSerializer(todos, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # 2. Create
+    def CPpoints_analysis(self, request):
+        controlpoints = Controlpoints_NA.objects.all()
+        for cp in controlpoints:
+            latitude = float(cp.latitude)
+            longitude = float(cp.longitude)
+            
+            # Create a Point object representing the given location
+            location = Point(longitude, latitude, srid=4326)
+            # Select only online integrity stations
+            integritystations = Station.objects.filter(stationtype='integrity', status='1')
+            neighborstations = integritystations.annotate(distance=Distance('geom', location)).filter(distance__lte=300000)
+            cp.count = neighborstations.count()
+            cp.save()
+
+
+    
+class ControlpointsStatsApiView(APIView):
+    # add permission to check if user is authenticated
+    permission_classes = [permissions.IsAuthenticated]
+
+    # 1. List all control points
+    def get(self, request, *args, **kwargs):
+        # List all the todo items for given requested user
+        cp = Controlpoints_NA.objects.all()
+        level1 = cp.filter(count__lt=1).count()
+        level2 = cp.filter(count=1).count()
+        level3 = cp.filter(count__gte=2).count()
+        result = {'level 1 cp': level1, 'level 2 cp': level2, 'level 3 cp': level3}
+        # serializer = CPSerializer(todos, many=True)
+        return Response(result, status=status.HTTP_200_OK)
+
+
+
