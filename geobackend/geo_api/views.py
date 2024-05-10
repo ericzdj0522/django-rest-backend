@@ -8,6 +8,7 @@ from django_filters import rest_framework as filters
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from django.http import JsonResponse
+from django.db.models import Sum
 from geopy.geocoders import Nominatim
 import certifi
 import ssl
@@ -271,7 +272,7 @@ class ControlpointsApiView(APIView):
         serializer = CPSerializer(todos, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # 2. Create
+    # 2. Control point analysis function
     def CPpoints_analysis(self, request):
         controlpoints = Controlpoints_NA.objects.all()
         for cp in controlpoints:
@@ -292,16 +293,82 @@ class ControlpointsStatsApiView(APIView):
     # add permission to check if user is authenticated
     permission_classes = [permissions.IsAuthenticated]
 
-    # 1. List all control points
+    # Calculate control points statistics based on the count of integrity stations within 300 km    
     def get(self, request, *args, **kwargs):
         # List all the todo items for given requested user
         cp = Controlpoints_NA.objects.all()
         level1 = cp.filter(count__lt=1).count()
         level2 = cp.filter(count=1).count()
         level3 = cp.filter(count__gte=2).count()
-        result = {'level 1 cp': level1, 'level 2 cp': level2, 'level 3 cp': level3}
+
+        level1percentage = (level1 / cp.count()) * 100 
+        level2percentage = (level2 / cp.count()) * 100
+        level3percentage = (level3 / cp.count()) * 100
+        result = {'level 1 cp': level1percentage, 'level 2 cp': level2percentage, 'level 3 cp': level3percentage}
         # serializer = CPSerializer(todos, many=True)
         return Response(result, status=status.HTTP_200_OK)
 
+
+class ControlpointsMonthlyStatsApiView(APIView):
+
+    # add permission to check if user is authenticated
+    permission_classes = [permissions.IsAuthenticated]
+
+    # Refresh service level time everytime control points is calculated per 24 hours
+    def get(self, request, *args, **kwargs):
+        self.CPpoints_analysis(request)
+        todos = Controlpoints_NA.objects.all()
+        serializer = CPSerializer(todos, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+    # 2. Control point analysis function
+    def CPpoints_analysis(self, request):
+        controlpoints = Controlpoints_NA.objects.all()
+        for cp in controlpoints:
+            latitude = float(cp.latitude)
+            longitude = float(cp.longitude)
+            
+            # Create a Point object representing the given location
+            location = Point(longitude, latitude, srid=4326)
+            # Select only online integrity stations
+            integritystations = Station.objects.filter(stationtype='integrity', status='1')
+            neighborstations = integritystations.annotate(distance=Distance('geom', location)).filter(distance__lte=300000)
+            cp.count = neighborstations.count()
+
+            # Refresh service level time everytime control points is calculated per 24 hours
+            # Refresh granularity is 24 hour
+            unit = 1
+
+            if cp.count >= 2:
+                cp.sl3_time += unit
+            elif cp.count == 1:
+                cp.sl2_time += unit
+            elif cp.count < 1:
+                cp.sl1_time += unit
+
+            cp.save()
+
+
+class ControlpointsMonthlySummaryApiView(APIView):
+    # add permission to check if user is authenticated
+    permission_classes = [permissions.IsAuthenticated]
+
+    # Generate monthly control points stats based on service level field
+    def get(self, request, *args, **kwargs):
+        # List all the todo items for given requested user
+        period = 15
+        num = Controlpoints_NA.objects.all().count()
+        level1_total_time = Controlpoints_NA.objects.aggregate(Sum('sl1_time')).get('sl1_time__sum')
+        level2_total_time = Controlpoints_NA.objects.aggregate(Sum('sl2_time')).get('sl2_time__sum')
+        level3_total_time = Controlpoints_NA.objects.aggregate(Sum('sl3_time')).get('sl3_time__sum')
+        
+        level1percentage = (level1_total_time / (period * num)) * 100 
+        level2percentage = (level2_total_time / (period * num)) * 100
+        level3percentage = (level3_total_time / (period * num)) * 100
+        
+        result = {'level 1 cp': level1percentage, 'level 2 cp': level2percentage, 'level 3 cp': level3percentage}
+        # serializer = CPSerializer(todos, many=True)
+        return Response(result, status=status.HTTP_200_OK)
 
 

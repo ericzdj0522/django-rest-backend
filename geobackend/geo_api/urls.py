@@ -1,7 +1,7 @@
 from django.urls import re_path as url
 from django.urls import path, include
 from .views import (
-    TodoListApiView, EUListApiView, APListApiView, RTKListApiView, GeocodeAPIView, ControlpointsApiView, ControlpointsStatsApiView
+    TodoListApiView, EUListApiView, APListApiView, RTKListApiView, GeocodeAPIView, ControlpointsApiView, ControlpointsStatsApiView, ControlpointsMonthlyStatsApiView, ControlpointsMonthlySummaryApiView
 )
 from .views import find_nearest_point_of_interest
 
@@ -15,4 +15,6 @@ urlpatterns = [
     path('geocode/', GeocodeAPIView.as_view(), name='geocode_api'),
     path('cpanalysis/', ControlpointsApiView.as_view()),
     path('cpstats/', ControlpointsStatsApiView.as_view()),
+    path('cpmonthlystats/', ControlpointsMonthlyStatsApiView.as_view()),
+    path('cpmonthlysummary/', ControlpointsMonthlySummaryApiView.as_view()),
 ]

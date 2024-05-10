@@ -35,4 +35,4 @@ class CPSerializer(GeoFeatureModelSerializer):
     class Meta:
         model = Controlpoints_NA
         geo_field = 'geom'
-        fields = ["id", "longitude", "latitude","count"]
+        fields = ["id", "longitude", "latitude","count","sl1_time","sl2_time","sl3_time"]

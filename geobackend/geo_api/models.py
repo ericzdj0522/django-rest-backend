@@ -59,3 +59,6 @@ class Controlpoints_NA(models.Model):
     longitude = models.CharField(max_length=100, null=True)
     latitude = models.CharField(max_length=100, null=True)
     count = models.CharField(max_length=100, null=True)
+    sl1_time = models.IntegerField(default=0)
+    sl2_time= models.IntegerField(default=0)
+    sl3_time = models.IntegerField(default=0)
