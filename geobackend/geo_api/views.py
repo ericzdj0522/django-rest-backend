@@ -13,6 +13,8 @@ from geopy.geocoders import Nominatim
 import certifi
 import ssl
 
+#API view for RTK coverage maps
+
 #Create API endpoint function for finding nearest station for POI
 def find_nearest_point_of_interest(request):
     if request.method == 'GET':
@@ -287,7 +289,7 @@ class ControlpointsApiView(APIView):
             cp.count = neighborstations.count()
             cp.save()
 
-
+# API view for control points statistics
     
 class ControlpointsStatsApiView(APIView):
     # add permission to check if user is authenticated
@@ -304,7 +306,13 @@ class ControlpointsStatsApiView(APIView):
         level1percentage = (level1 / cp.count()) * 100 
         level2percentage = (level2 / cp.count()) * 100
         level3percentage = (level3 / cp.count()) * 100
-        result = {'level 1 cp': level1percentage, 'level 2 cp': level2percentage, 'level 3 cp': level3percentage}
+        
+        level1_total_time = Controlpoints_NA.objects.aggregate(Sum('sl1_time')).get('sl1_time__sum')
+        level2_total_time = Controlpoints_NA.objects.aggregate(Sum('sl2_time')).get('sl2_time__sum')
+        level3_total_time = Controlpoints_NA.objects.aggregate(Sum('sl3_time')).get('sl3_time__sum')
+
+        #Return the percentage of control points in each service level, also count of each level control points are returned
+        result = {'level1_count': level1, 'level2_count': level2, 'level3_count': level3, 'level1_pc': level1percentage, 'level2_pc': level2percentage, 'level3_pc': level3percentage, 'level1_time': level1_total_time, 'level2_time': level2_total_time, 'level3_time': level3_total_time}
         # serializer = CPSerializer(todos, many=True)
         return Response(result, status=status.HTTP_200_OK)
 
@@ -357,7 +365,7 @@ class ControlpointsMonthlySummaryApiView(APIView):
     # Generate monthly control points stats based on service level field
     def get(self, request, *args, **kwargs):
         # List all the todo items for given requested user
-        period = 15
+        period = 7
         num = Controlpoints_NA.objects.all().count()
         level1_total_time = Controlpoints_NA.objects.aggregate(Sum('sl1_time')).get('sl1_time__sum')
         level2_total_time = Controlpoints_NA.objects.aggregate(Sum('sl2_time')).get('sl2_time__sum')
