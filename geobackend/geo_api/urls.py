@@ -1,13 +1,13 @@
 from django.urls import re_path as url
 from django.urls import path, include
 from .views import (
-    TodoListApiView, EUListApiView, APListApiView, RTKListApiView, GeocodeAPIView, ControlpointsApiView, ControlpointsStatsApiView, ControlpointsMonthlyStatsApiView, ControlpointsMonthlySummaryApiView
+    NAListApiView, EUListApiView, APListApiView, RTKListApiView, GeocodeAPIView, ControlpointsApiView, ControlpointsStatsApiView, ControlpointsMonthlyStatsApiView, ControlpointsMonthlySummaryApiView
 )
 from .views import find_nearest_point_of_interest
 
 #setting up api endpoint url
 urlpatterns = [
-    path('api/', TodoListApiView.as_view()),
+    path('na_api/', NAListApiView.as_view()),
     path('eu_api/', EUListApiView.as_view()),
     path('ap_api/', APListApiView.as_view()),
     path('rtk/', RTKListApiView.as_view()),

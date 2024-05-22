@@ -40,7 +40,7 @@ def find_nearest_point_of_interest(request):
 
 
 
-class TodoListApiView(APIView):
+class NAListApiView(APIView):
     # add permission to check if user is authenticated
     permission_classes = [permissions.IsAuthenticated]
 
@@ -230,7 +230,7 @@ class GeocodeAPIView(APIView):
         if not address:
             return Response({'error': 'Address parameter is required'}, status=400)
 
-        geolocator = Nominatim(user_agent="my_geocoder", ssl_context=ssl_context)
+        geolocator = Nominatim(user_agent="test_geocoder", ssl_context=ssl_context)
         location = geolocator.geocode(address)
 
         #Find nearest station to specific station
@@ -290,23 +290,24 @@ class ControlpointsApiView(APIView):
             cp.save()
 
 # API view for control points statistics
-    
 class ControlpointsStatsApiView(APIView):
     # add permission to check if user is authenticated
     permission_classes = [permissions.IsAuthenticated]
 
     # Calculate control points statistics based on the count of integrity stations within 300 km    
     def get(self, request, *args, **kwargs):
-        # List all the todo items for given requested user
+        # List all the control points for given requested user
         cp = Controlpoints_NA.objects.all()
         level1 = cp.filter(count__lt=1).count()
         level2 = cp.filter(count=1).count()
         level3 = cp.filter(count__gte=2).count()
 
+        #Control points percentage
         level1percentage = (level1 / cp.count()) * 100 
         level2percentage = (level2 / cp.count()) * 100
         level3percentage = (level3 / cp.count()) * 100
         
+        #Control points total time for each service level
         level1_total_time = Controlpoints_NA.objects.aggregate(Sum('sl1_time')).get('sl1_time__sum')
         level2_total_time = Controlpoints_NA.objects.aggregate(Sum('sl2_time')).get('sl2_time__sum')
         level3_total_time = Controlpoints_NA.objects.aggregate(Sum('sl3_time')).get('sl3_time__sum')
@@ -378,5 +379,6 @@ class ControlpointsMonthlySummaryApiView(APIView):
         result = {'level 1 cp': level1percentage, 'level 2 cp': level2percentage, 'level 3 cp': level3percentage}
         # serializer = CPSerializer(todos, many=True)
         return Response(result, status=status.HTTP_200_OK)
+
 
 
