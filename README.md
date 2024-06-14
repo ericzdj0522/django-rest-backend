@@ -27,6 +27,8 @@ To check active cronjob list, run command:
 ```
 python manage.py crontab show
 ```
+For more information on django cronjob, please follow:
+https://pypi.org/project/django-crontab/
 
 # PostGIS migration
 Once connect to production database with correct configuration in setting.py, run command to migrate data models:
