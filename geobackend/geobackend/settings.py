@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'django_filters',
     'geo_api',
     'corsheaders',
+    'django_extensions',
+    'django_crontab',
 ]
 
 MIDDLEWARE = [
@@ -131,3 +133,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
 STATIC_URL = '/static/'
+
+
+CRONJOBS = [
+    ('*/1 * * * *', 'geo_api.cron.call_api_and_update_metrics')  # This means every minute
+]

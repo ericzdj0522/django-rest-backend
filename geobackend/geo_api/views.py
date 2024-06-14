@@ -12,45 +12,21 @@ from django.db.models import Sum
 from geopy.geocoders import Nominatim
 import certifi
 import ssl
+from django.http import HttpResponse
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from .metrics import api_response_metric, api_call_counter, level1_count_g, level2_count_g, level3_count_g, level1_pc_g, level2_pc_g, level3_pc_g, level1_time_g, level2_time_g, level3_time_g
+
 
 #API view for RTK coverage maps
-
-#Create API endpoint function for finding nearest station for POI
-def find_nearest_point_of_interest(request):
-    if request.method == 'GET':
-        try:
-            latitude = float(request.GET.get('latitude'))
-            longitude = float(request.GET.get('longitude'))
-            
-            # Create a Point object representing the given location
-            location = Point(longitude, latitude, srid=4326)
-
-            # Query the PointOfInterest model and annotate each object with its distance to the given location
-            nearest_point = Station.objects.annotate(distance=Distance('geom', location)).order_by('distance').first()
-
-            if nearest_point:
-                return JsonResponse({'name': nearest_point.station, 'distance': nearest_point.distance.km, 'status': nearest_point.status})
-            else:
-                return JsonResponse({'error': 'No points of interest found'})
-        except ValueError:
-            return JsonResponse({'error': 'Invalid latitude or longitude'})
-    else:
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-
-
-
 class NAListApiView(APIView):
     # add permission to check if user is authenticated
     permission_classes = [permissions.IsAuthenticated]
 
     # 1. List all
-    
     def get(self, request, *args, **kwargs):
         # List all the todo items for given requested user
 
         todos = Station.objects.all()
-        print(todos)
         print(todos)
         todos = Station.objects.filter(stationtype='integrity')
         #filtered_queryset = self.filter_queryset(todos)
@@ -113,6 +89,7 @@ class NAListApiView(APIView):
             queryset = queryset.filter(status=param10)
 
         return queryset
+
 
 class EUListApiView(APIView):
     # add permission to check if user is authenticated
@@ -179,6 +156,8 @@ class APListApiView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
 #API view for nearest RTK station
 class RTKListApiView(APIView):
      # add permission to check if user is authenticated
@@ -215,6 +194,7 @@ class RTKListApiView(APIView):
             return {'error': 'Invalid latitude or longitude'}
 
 
+
 #API view for geocoding function
 class GeocodeAPIView(APIView):
     # add permission to check if user is authenticated
@@ -236,12 +216,6 @@ class GeocodeAPIView(APIView):
         #Find nearest station to specific station
         result = self.find_nearest_point_of_interest(location.longitude, location.latitude)
         return Response(result, status=status.HTTP_200_OK)
-        '''
-        if location:
-            return Response({'latitude': location.latitude, 'longitude': location.longitude})
-        else:
-            return Response({'error': 'Geocoding failed'}, status=500)
-        '''
 
     def find_nearest_point_of_interest(self, longitude, latitude):
         try:
@@ -261,14 +235,15 @@ class GeocodeAPIView(APIView):
             return {'error': 'Invalid latitude or longitude'}
 
 
+
+#API view for control points analysis
 class ControlpointsApiView(APIView):
     # add permission to check if user is authenticated
     permission_classes = [permissions.IsAuthenticated]
 
-    # 1. List all
-    
+    # 1. List all control points
     def get(self, request, *args, **kwargs):
-        # List all the todo items for given requested user
+        # Perform control points analysis based on station status
         self.CPpoints_analysis(request)
         todos = Controlpoints_NA.objects.all()
         serializer = CPSerializer(todos, many=True)
@@ -288,6 +263,7 @@ class ControlpointsApiView(APIView):
             neighborstations = integritystations.annotate(distance=Distance('geom', location)).filter(distance__lte=300000)
             cp.count = neighborstations.count()
             cp.save()
+
 
 # API view for control points statistics
 class ControlpointsStatsApiView(APIView):
@@ -314,10 +290,26 @@ class ControlpointsStatsApiView(APIView):
 
         #Return the percentage of control points in each service level, also count of each level control points are returned
         result = {'level1_count': level1, 'level2_count': level2, 'level3_count': level3, 'level1_pc': level1percentage, 'level2_pc': level2percentage, 'level3_pc': level3percentage, 'level1_time': level1_total_time, 'level2_time': level2_total_time, 'level3_time': level3_total_time}
+        
+        # Set metric value for promethues scraping
+        level1_count_g.set(result['level1_count'])
+        level2_count_g.set(result['level2_count'])
+        level3_count_g.set(result['level3_count'])
+
+        level1_pc_g.set(result['level1_pc'])
+        level2_pc_g.set(result['level2_pc'])
+        level3_pc_g.set(result['level3_pc'])
+
+        level1_time_g.set(result['level1_time'])
+        level2_time_g.set(result['level2_time'])
+        level3_time_g.set(result['level3_time'])
         # serializer = CPSerializer(todos, many=True)
+
+
         return Response(result, status=status.HTTP_200_OK)
 
 
+# API view for monthly control points statistics
 class ControlpointsMonthlyStatsApiView(APIView):
 
     # add permission to check if user is authenticated
@@ -359,6 +351,7 @@ class ControlpointsMonthlyStatsApiView(APIView):
             cp.save()
 
 
+# API view for monthly control points summary statistics
 class ControlpointsMonthlySummaryApiView(APIView):
     # add permission to check if user is authenticated
     permission_classes = [permissions.IsAuthenticated]
@@ -381,4 +374,36 @@ class ControlpointsMonthlySummaryApiView(APIView):
         return Response(result, status=status.HTTP_200_OK)
 
 
+#Create API endpoint function for finding nearest station for POI
+def find_nearest_point_of_interest(request):
+    if request.method == 'GET':
+        try:
+            latitude = float(request.GET.get('latitude'))
+            longitude = float(request.GET.get('longitude'))
+            
+            # Create a Point object representing the given location
+            location = Point(longitude, latitude, srid=4326)
 
+            # Query the PointOfInterest model and annotate each object with its distance to the given location
+            nearest_point = Station.objects.annotate(distance=Distance('geom', location)).order_by('distance').first()
+
+            if nearest_point:
+                return JsonResponse({'name': nearest_point.station, 'distance': nearest_point.distance.km, 'status': nearest_point.status})
+            else:
+                return JsonResponse({'error': 'No points of interest found'})
+        except ValueError:
+            return JsonResponse({'error': 'Invalid latitude or longitude'})
+    else:
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+#Create a view to serve metrics
+def metrics(request):
+    metrics_page = generate_latest()
+    return HttpResponse(metrics_page, content_type=CONTENT_TYPE_LATEST)
+
+def update_metrics_view(request):
+    # Manually update the metrics for testing
+    api_call_counter.inc()
+    api_response_metric.set(123)  # Example value
+    return HttpResponse("Metrics updated")

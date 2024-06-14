@@ -4,6 +4,7 @@ from .views import (
     NAListApiView, EUListApiView, APListApiView, RTKListApiView, GeocodeAPIView, ControlpointsApiView, ControlpointsStatsApiView, ControlpointsMonthlyStatsApiView, ControlpointsMonthlySummaryApiView
 )
 from .views import find_nearest_point_of_interest
+from .views import metrics, update_metrics_view
 
 #setting up api endpoint url
 urlpatterns = [
@@ -17,4 +18,6 @@ urlpatterns = [
     path('cpstats/', ControlpointsStatsApiView.as_view()),
     path('cpmonthlystats/', ControlpointsMonthlyStatsApiView.as_view()),
     path('cpmonthlysummary/', ControlpointsMonthlySummaryApiView.as_view()),
+    path('metrics/', metrics, name='metrics'),
+    path('update-metrics/', update_metrics_view, name='update_metrics'),
 ]
