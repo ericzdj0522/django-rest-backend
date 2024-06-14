@@ -28,4 +28,13 @@ To check active cronjob list, run command:
 python manage.py crontab show
 ```
 
+# PostGIS migration
+Once connect to production database with correct configuration in setting.py, run command to migrate data models:
+```
+python manage.py makemigrations
+```
+Then apply migrations:
+```
+python manage.py migrate
+```
 
