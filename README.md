@@ -1,7 +1,7 @@
 Django Rest API backend
 ===
 # Introduction
-This is a geospatial django backend built for swift stations database API query and verification. All station data are compiled from Sitetracker and Grafana production dashboards, they are converted into spatial format stored in postgis database and published as WFS services via Geoserver.
+This is a geospatial django backend built for swift stations database API query and verification. All station data are compiled from Sitetracker and Grafana production dashboards, they are converted into spatial format stored in postgis database.
 
 # Getting Started
 Set up local PostGIS database for migration
