@@ -17,7 +17,7 @@ python manage.py runserver
 An application instance will be running at http://localhost:8000
 
 # Initialize Django cronjob for API requests:
-Predefined cronjob for API requests are defined in cron.py, to set up cronjob in produciton:
+Predefined cronjob for API requests are defined in cron.py, to set up cronjob in producton:
 
 run the command to add cronjob:
 ```
