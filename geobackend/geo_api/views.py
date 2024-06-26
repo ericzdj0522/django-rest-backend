@@ -2,8 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
-from .models import Station, EU_Station, AP_Station, Controlpoints_NA
-from .serializers import TodoSerializer, EUSerializer, APSerializer, CPSerializer
+from .models import Station, EU_Station, AP_Station, Controlpoints_NA, Controlpoints_EU, Controlpoints_AP, CPcells_NA
+from .serializers import TodoSerializer, EUSerializer, APSerializer, CPSerializer, CPSerializerEU, CPSerializerAP, CPcellsSerializerNA
 from django_filters import rest_framework as filters
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
@@ -245,13 +245,33 @@ class ControlpointsApiView(APIView):
     def get(self, request, *args, **kwargs):
         # Perform control points analysis based on station status
         self.CPpoints_analysis(request)
-        todos = Controlpoints_NA.objects.all()
-        serializer = CPSerializer(todos, many=True)
+        region = request.GET.get('region')
+        if region == 'NA':
+            todos = Controlpoints_NA.objects.all()
+            serializer = CPSerializer(todos, many=True)
+        elif region == 'EU':
+            todos = Controlpoints_EU.objects.all()
+            serializer = CPSerializerEU(todos, many=True)
+        elif region == 'AP':
+            todos = Controlpoints_AP.objects.all()
+            serializer = CPSerializerAP(todos, many=True)
+        
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 2. Control point analysis function
     def CPpoints_analysis(self, request):
-        controlpoints = Controlpoints_NA.objects.all()
+        region = request.GET.get('region')
+        if region == 'NA':
+            controlpoints = Controlpoints_NA.objects.all()
+            integritystations = Station.objects.filter(stationtype='integrity', status='1')
+        elif region == 'EU':
+            controlpoints = Controlpoints_EU.objects.all()
+            integritystations = EU_Station.objects.filter(stationtype='integrity', status='1')
+        elif region == 'AP':
+            controlpoints = Controlpoints_AP.objects.all()
+            integritystations = AP_Station.objects.filter(stationtype='integrity', status='1')
+        
+        #controlpoints = Controlpoints_NA.objects.all()
         for cp in controlpoints:
             latitude = float(cp.latitude)
             longitude = float(cp.longitude)
@@ -259,10 +279,62 @@ class ControlpointsApiView(APIView):
             # Create a Point object representing the given location
             location = Point(longitude, latitude, srid=4326)
             # Select only online integrity stations
-            integritystations = Station.objects.filter(stationtype='integrity', status='1')
             neighborstations = integritystations.annotate(distance=Distance('geom', location)).filter(distance__lte=300000)
             cp.count = neighborstations.count()
             cp.save()
+
+
+#API view for CP cells POC
+class CPcellsApiView(APIView):
+    # add permission to check if user is authenticated
+    permission_classes = [permissions.IsAuthenticated]
+
+    # 1. List all control points cells
+    def get(self, request, *args, **kwargs):
+        todos = CPcells_NA.objects.all()
+        result = self.CPcells_analysis(request)
+        
+        serializer = CPcellsSerializerNA(todos, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # perfom cell evaluation based on control points
+    def CPcells_analysis(self, request):
+        cplist = []
+        controlpoints = Controlpoints_NA.objects.all()
+        cp_cells = CPcells_NA.objects.all()
+        #grid cells iteration
+        for cp_cell in cp_cells:
+            #record 4 control points for each cell and their status
+            cpstatus = []
+            #grid cell vertices interation
+            for i in range(0, 4):
+                
+                longitude = float(cp_cell.geom.coords[0][i][0])
+                latitude = float(cp_cell.geom.coords[0][i][1])
+                vertice = Point(longitude, latitude, srid=4326)
+
+                #Using spatial index to search control points and check their status
+                controlpoint = Controlpoints_NA.objects.filter(geom__exact=vertice)
+                for cp in controlpoint:
+                    cplist.append(cp.id)
+                    #Store control points status in a 4 items list
+                    cpstatus.append(cp.count)
+
+            #define symbology rule for different level of grid cells
+            if len(cpstatus) < 4:
+                cp_cell.count = 1
+            elif '0' in cpstatus:
+                cp_cell.count = 1
+            elif '1' in cpstatus:
+                cp_cell.count = 2
+            else:
+                cp_cell.count = 3
+
+            cp_cell.save()
+
+
+        return cplist
+            
 
 
 # API view for control points statistics

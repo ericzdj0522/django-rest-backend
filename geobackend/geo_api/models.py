@@ -62,3 +62,31 @@ class Controlpoints_NA(models.Model):
     sl1_time = models.IntegerField(default=0)
     sl2_time= models.IntegerField(default=0)
     sl3_time = models.IntegerField(default=0)
+
+class Controlpoints_EU(models.Model):
+    id = models.CharField(max_length=100, primary_key=True)
+    geom = models.PointField(srid=4326, null=True)
+    longitude = models.CharField(max_length=100, null=True)
+    latitude = models.CharField(max_length=100, null=True)
+    count = models.CharField(max_length=100, null=True)
+    sl1_time = models.IntegerField(default=0)
+    sl2_time= models.IntegerField(default=0)
+    sl3_time = models.IntegerField(default=0)
+
+class Controlpoints_AP(models.Model):
+    id = models.CharField(max_length=100, primary_key=True)
+    geom = models.PointField(srid=4326, null=True)
+    longitude = models.CharField(max_length=100, null=True)
+    latitude = models.CharField(max_length=100, null=True)
+    count = models.CharField(max_length=100, null=True)
+    sl1_time = models.IntegerField(default=0)
+    sl2_time= models.IntegerField(default=0)
+    sl3_time = models.IntegerField(default=0)
+
+class CPcells_NA(models.Model):
+    id = models.CharField(max_length=100, primary_key=True)
+    geom = models.PolygonField(srid=4326, null=True)
+    longitude = models.CharField(max_length=100, null=True)
+    latitude = models.CharField(max_length=100, null=True)
+    count = models.CharField(max_length=100, null=True)
+

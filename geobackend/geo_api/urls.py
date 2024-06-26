@@ -1,7 +1,7 @@
 from django.urls import re_path as url
 from django.urls import path, include
 from .views import (
-    NAListApiView, EUListApiView, APListApiView, RTKListApiView, GeocodeAPIView, ControlpointsApiView, ControlpointsStatsApiView, ControlpointsMonthlyStatsApiView, ControlpointsMonthlySummaryApiView
+    NAListApiView, EUListApiView, APListApiView, RTKListApiView, GeocodeAPIView, ControlpointsApiView, ControlpointsStatsApiView, ControlpointsMonthlyStatsApiView, ControlpointsMonthlySummaryApiView, CPcellsApiView
 )
 from .views import find_nearest_point_of_interest
 from .views import metrics, update_metrics_view
@@ -15,9 +15,12 @@ urlpatterns = [
     path('nearest-point-of-interest/', find_nearest_point_of_interest, name='nearest_point_of_interest'),
     path('geocode/', GeocodeAPIView.as_view(), name='geocode_api'),
     path('cpanalysis/', ControlpointsApiView.as_view()),
+    path('cpcells/', CPcellsApiView.as_view()),
     path('cpstats/', ControlpointsStatsApiView.as_view()),
     path('cpmonthlystats/', ControlpointsMonthlyStatsApiView.as_view()),
     path('cpmonthlysummary/', ControlpointsMonthlySummaryApiView.as_view()),
     path('metrics/', metrics, name='metrics'),
     path('update-metrics/', update_metrics_view, name='update_metrics'),
+    
+    
 ]
