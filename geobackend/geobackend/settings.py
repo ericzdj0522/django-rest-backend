@@ -87,10 +87,10 @@ CORS_ORIGIN_ALLOW_ALL = True
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'gis',
-        'USER': '',
-        'PASSWORD': '',
-        'HOST': 'localhost',
+        'NAME': 'postgisstaging',
+        'USER': 'geoserver',
+        'PASSWORD': 'hajoo7gizu2toeng7ahyahw8ahBahkee1ia1Ja1i',
+        'HOST': 'postgisstaging.cq6imc38uzle.us-west-2.rds.amazonaws.com',
         'PORT': '5432'
     }
 }

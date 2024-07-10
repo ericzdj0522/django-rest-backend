@@ -90,3 +90,17 @@ class CPcells_NA(models.Model):
     latitude = models.CharField(max_length=100, null=True)
     count = models.CharField(max_length=100, null=True)
 
+class CPcells_EU(models.Model):
+    id = models.CharField(max_length=100, primary_key=True)
+    geom = models.PolygonField(srid=4326, null=True)
+    longitude = models.CharField(max_length=100, null=True)
+    latitude = models.CharField(max_length=100, null=True)
+    count = models.CharField(max_length=100, null=True)
+
+class CPcells_AP(models.Model):
+    id = models.CharField(max_length=100, primary_key=True)
+    geom = models.PolygonField(srid=4326, null=True)
+    longitude = models.CharField(max_length=100, null=True)
+    latitude = models.CharField(max_length=100, null=True)
+    count = models.CharField(max_length=100, null=True)
+
