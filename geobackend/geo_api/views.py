@@ -14,7 +14,7 @@ import certifi
 import ssl
 from django.http import HttpResponse
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-from .metrics import api_response_metric, api_call_counter, level1_count_g, level2_count_g, level3_count_g, level1_pc_g, level2_pc_g, level3_pc_g, level1_time_g, level2_time_g, level3_time_g
+from .metrics import *
 
 
 #API view for RTK coverage maps
@@ -366,40 +366,123 @@ class ControlpointsStatsApiView(APIView):
     # Calculate control points statistics based on the count of integrity stations within 300 km    
     def get(self, request, *args, **kwargs):
         # List all the control points for given requested user
-        cp = Controlpoints_NA.objects.all()
-        level1 = cp.filter(count__lt=1).count()
-        level2 = cp.filter(count=1).count()
-        level3 = cp.filter(count__gte=2).count()
-
-        #Control points percentage
-        level1percentage = (level1 / cp.count()) * 100 
-        level2percentage = (level2 / cp.count()) * 100
-        level3percentage = (level3 / cp.count()) * 100
-        
-        #Control points total time for each service level
-        level1_total_time = Controlpoints_NA.objects.aggregate(Sum('sl1_time')).get('sl1_time__sum')
-        level2_total_time = Controlpoints_NA.objects.aggregate(Sum('sl2_time')).get('sl2_time__sum')
-        level3_total_time = Controlpoints_NA.objects.aggregate(Sum('sl3_time')).get('sl3_time__sum')
-
-        #Return the percentage of control points in each service level, also count of each level control points are returned
-        result = {'level1_count': level1, 'level2_count': level2, 'level3_count': level3, 'level1_pc': level1percentage, 'level2_pc': level2percentage, 'level3_pc': level3percentage, 'level1_time': level1_total_time, 'level2_time': level2_total_time, 'level3_time': level3_total_time}
-        
-        # Set metric value for promethues scraping
-        level1_count_g.set(result['level1_count'])
-        level2_count_g.set(result['level2_count'])
-        level3_count_g.set(result['level3_count'])
-
-        level1_pc_g.set(result['level1_pc'])
-        level2_pc_g.set(result['level2_pc'])
-        level3_pc_g.set(result['level3_pc'])
-
-        level1_time_g.set(result['level1_time'])
-        level2_time_g.set(result['level2_time'])
-        level3_time_g.set(result['level3_time'])
-        # serializer = CPSerializer(todos, many=True)
-
-
+        result = self.metrics_collector('EU')
         return Response(result, status=status.HTTP_200_OK)
+
+    def metrics_collector(self, region):
+        if region == 'NA':
+            cp = Controlpoints_NA.objects.all()
+            #iterate through control points and setup metrics:
+            for cpitem in cp:
+                cpcount = int(cpitem.count)
+                #set level for each control point metrics
+                if  cpcount >= 2:
+                    cp_level_g.labels(cpid=cpitem.id).set(2)
+                elif cpcount == 1:
+                    cp_level_g.labels(cpid=cpitem.id).set(1)
+                else:
+                    cp_level_g.labels(cpid=cpitem.id).set(0)
+
+            level1 = cp.filter(count__lt=1).count()
+            level2 = cp.filter(count=1).count()
+            level3 = cp.filter(count__gte=2).count()
+            
+            #Control points total time for each service level
+            level1_total_time = Controlpoints_NA.objects.aggregate(Sum('sl1_time')).get('sl1_time__sum')
+            level2_total_time = Controlpoints_NA.objects.aggregate(Sum('sl2_time')).get('sl2_time__sum')
+            level3_total_time = Controlpoints_NA.objects.aggregate(Sum('sl3_time')).get('sl3_time__sum')
+
+            #Return the percentage of control points in each service level, also count of each level control points are returned
+            result = {'level1_count': level1, 'level2_count': level2, 'level3_count': level3, 'level1_time': level1_total_time, 'level2_time': level2_total_time, 'level3_time': level3_total_time}
+            
+            # Set metric value for promethues scraping
+            level1_count_g.set(result['level1_count'])
+            level2_count_g.set(result['level2_count'])
+            level3_count_g.set(result['level3_count'])
+
+            level1_time_g.set(result['level1_time'])
+            level2_time_g.set(result['level2_time'])
+            level3_time_g.set(result['level3_time'])
+            # serializer = CPSerializer(todos, many=True)
+
+            return result
+
+        elif region == 'EU':
+            cp = Controlpoints_EU.objects.all()
+            #iterate through control points and setup metrics:
+            for cpitem in cp:
+                cpcount = int(cpitem.count)
+                #set level for each control point metrics
+                if  cpcount >= 2:
+                    cp_level_eu.labels(cpid=cpitem.id).set(2)
+                elif cpcount == 1:
+                    cp_level_eu.labels(cpid=cpitem.id).set(1)
+                else:
+                    cp_level_eu.labels(cpid=cpitem.id).set(0)
+
+            level1 = cp.filter(count__lt=1).count()
+            level2 = cp.filter(count=1).count()
+            level3 = cp.filter(count__gte=2).count()
+            
+            #Control points total time for each service level
+            level1_total_time = Controlpoints_EU.objects.aggregate(Sum('sl1_time')).get('sl1_time__sum')
+            level2_total_time = Controlpoints_EU.objects.aggregate(Sum('sl2_time')).get('sl2_time__sum')
+            level3_total_time = Controlpoints_EU.objects.aggregate(Sum('sl3_time')).get('sl3_time__sum')
+
+            #Return the percentage of control points in each service level, also count of each level control points are returned
+            result = {'level1_count': level1, 'level2_count': level2, 'level3_count': level3, 'level1_time': level1_total_time, 'level2_time': level2_total_time, 'level3_time': level3_total_time}
+            
+            # Set metric value for promethues scraping
+            level1_count_eu.set(result['level1_count'])
+            level2_count_eu.set(result['level2_count'])
+            level3_count_eu.set(result['level3_count'])
+
+            level1_time_eu.set(result['level1_time'])
+            level2_time_eu.set(result['level2_time'])
+            level3_time_eu.set(result['level3_time'])
+            # serializer = CPSerializer(todos, many=True)
+
+            return result
+
+        elif region == 'AP':
+            cp = Controlpoints_AP.objects.all()
+            #iterate through control points and setup metrics:
+            for cpitem in cp:
+                cpcount = int(cpitem.count)
+                #set level for each control point metrics
+                if  cpcount >= 2:
+                    cp_level_ap.labels(cpid=cpitem.id).set(2)
+                elif cpcount == 1:
+                    cp_level_ap.labels(cpid=cpitem.id).set(1)
+                else:
+                    cp_level_ap.labels(cpid=cpitem.id).set(0)
+
+            level1 = cp.filter(count__lt=1).count()
+            level2 = cp.filter(count=1).count()
+            level3 = cp.filter(count__gte=2).count()
+            
+            #Control points total time for each service level
+            level1_total_time = Controlpoints_AP.objects.aggregate(Sum('sl1_time')).get('sl1_time__sum')
+            level2_total_time = Controlpoints_AP.objects.aggregate(Sum('sl2_time')).get('sl2_time__sum')
+            level3_total_time = Controlpoints_AP.objects.aggregate(Sum('sl3_time')).get('sl3_time__sum')
+
+            #Return the percentage of control points in each service level, also count of each level control points are returned
+            result = {'level1_count': level1, 'level2_count': level2, 'level3_count': level3, 'level1_time': level1_total_time, 'level2_time': level2_total_time, 'level3_time': level3_total_time}
+            
+            # Set metric value for promethues scraping
+            level1_count_ap.set(result['level1_count'])
+            level2_count_ap.set(result['level2_count'])
+            level3_count_ap.set(result['level3_count'])
+
+            level1_time_ap.set(result['level1_time'])
+            level2_time_ap.set(result['level2_time'])
+            level3_time_ap.set(result['level3_time'])
+            # serializer = CPSerializer(todos, many=True)
+
+            return result
+
+
+
 
 
 # API view for monthly control points statistics
@@ -418,7 +501,22 @@ class ControlpointsMonthlyStatsApiView(APIView):
 
     # 2. Control point analysis function
     def CPpoints_analysis(self, request):
-        controlpoints = Controlpoints_NA.objects.all()
+        self.cp_time_accumulator('NA')
+        self.cp_time_accumulator('EU')
+        self.cp_time_accumulator('AP')
+        
+
+    def cp_time_accumulator(self, region):
+        if region == 'NA':
+            controlpoints = Controlpoints_NA.objects.all()
+            integritystations = Station.objects.filter(stationtype='integrity', status='1')
+        elif region == 'EU':
+            controlpoints = Controlpoints_EU.objects.all()
+            integritystations = EU_Station.objects.filter(stationtype='integrity', status='1')
+        elif region == 'AP':
+            controlpoints = Controlpoints_AP.objects.all()
+            integritystations = AP_Station.objects.filter(stationtype='integrity', status='1')
+        
         for cp in controlpoints:
             latitude = float(cp.latitude)
             longitude = float(cp.longitude)
@@ -426,7 +524,7 @@ class ControlpointsMonthlyStatsApiView(APIView):
             # Create a Point object representing the given location
             location = Point(longitude, latitude, srid=4326)
             # Select only online integrity stations
-            integritystations = Station.objects.filter(stationtype='integrity', status='1')
+            #integritystations = Station.objects.filter(stationtype='integrity', status='1')
             neighborstations = integritystations.annotate(distance=Distance('geom', location)).filter(distance__lte=300000)
             cp.count = neighborstations.count()
 
@@ -444,27 +542,7 @@ class ControlpointsMonthlyStatsApiView(APIView):
             cp.save()
 
 
-# API view for monthly control points summary statistics
-class ControlpointsMonthlySummaryApiView(APIView):
-    # add permission to check if user is authenticated
-    permission_classes = [permissions.IsAuthenticated]
 
-    # Generate monthly control points stats based on service level field
-    def get(self, request, *args, **kwargs):
-        # List all the todo items for given requested user
-        period = 7
-        num = Controlpoints_NA.objects.all().count()
-        level1_total_time = Controlpoints_NA.objects.aggregate(Sum('sl1_time')).get('sl1_time__sum')
-        level2_total_time = Controlpoints_NA.objects.aggregate(Sum('sl2_time')).get('sl2_time__sum')
-        level3_total_time = Controlpoints_NA.objects.aggregate(Sum('sl3_time')).get('sl3_time__sum')
-        
-        level1percentage = (level1_total_time / (period * num)) * 100 
-        level2percentage = (level2_total_time / (period * num)) * 100
-        level3percentage = (level3_total_time / (period * num)) * 100
-        
-        result = {'level 1 cp': level1percentage, 'level 2 cp': level2percentage, 'level 3 cp': level3percentage}
-        # serializer = CPSerializer(todos, many=True)
-        return Response(result, status=status.HTTP_200_OK)
 
 
 #Create API endpoint function for finding nearest station for POI
