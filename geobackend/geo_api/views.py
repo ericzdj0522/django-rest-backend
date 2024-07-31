@@ -1,9 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework import permissions
-from .models import Station, EU_Station, AP_Station, Controlpoints_NA, Controlpoints_EU, Controlpoints_AP, CPcells_NA, CPcells_EU, CPcells_AP
-from .serializers import TodoSerializer, EUSerializer, APSerializer, CPSerializer, CPSerializerEU, CPSerializerAP, CPcellsSerializerNA, CPcellsSerializerEU, CPcellsSerializerAP
+from .models import Station, EU_Station, AP_Station, CN_Station, Controlpoints_NA, Controlpoints_EU, Controlpoints_AP, Controlpoints_CN, CPcells_NA, CPcells_EU, CPcells_AP, CPcells_CN
+from .serializers import TodoSerializer, EUSerializer, APSerializer, CPSerializer, CNSerializer, CPSerializerEU, CPSerializerAP, CPSerializerCN, CPcellsSerializerNA, CPcellsSerializerEU, CPcellsSerializerAP, CPcellsSerializerCN
 from django_filters import rest_framework as filters
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
@@ -28,7 +29,7 @@ class NAListApiView(APIView):
 
         todos = Station.objects.all()
         print(todos)
-        todos = Station.objects.filter(stationtype='integrity')
+        todos = Station.objects.all()
         #filtered_queryset = self.filter_queryset(todos)
         serializer = TodoSerializer(todos, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -157,6 +158,38 @@ class APListApiView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class CNListApiView(APIView):
+    # add permission to check if user is authenticated
+    permission_classes = [permissions.IsAuthenticated]
+
+    # 1. List all
+    
+    def get(self, request, *args, **kwargs):
+        # List all the todo items for given requested user
+        todos = CN_Station.objects.all()
+        print(todos)
+        serializer = CNSerializer(todos, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # 2. Create
+    def post(self, request, *args, **kwargs):
+        # Create the Todo with given todo data
+
+        data = {
+            'id': request.data.get('id'),
+            'station': request.data.get('station'),
+            'longitude': request.data.get('longitude'), 
+            'latitude': request.data.get('latitude'),
+            'geom': request.data.get('geom'),
+        }
+        serializer = CNSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 #API view for nearest RTK station
 class RTKListApiView(APIView):
@@ -255,6 +288,9 @@ class ControlpointsApiView(APIView):
         elif region == 'AP':
             todos = Controlpoints_AP.objects.all()
             serializer = CPSerializerAP(todos, many=True)
+        elif region == 'CN':
+            todos = Controlpoints_CN.objects.all()
+            serializer = CPSerializerCN(todos, many=True)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -271,6 +307,9 @@ class ControlpointsApiView(APIView):
         elif region == 'AP':
             controlpoints = Controlpoints_AP.objects.all()
             integritystations = AP_Station.objects.filter(stationtype='integrity', status='1')
+        elif region == 'CN':
+            controlpoints = Controlpoints_CN.objects.all()
+            integritystations = CN_Station.objects.filter(stationtype='integrity', status='1')
         
         #controlpoints = Controlpoints_NA.objects.all()
         for cp in controlpoints:
@@ -304,6 +343,9 @@ class CPcellsApiView(APIView):
         elif region == 'AP':
             todos = CPcells_AP.objects.all()
             serializer = CPcellsSerializerAP(todos, many=True)
+        elif region == 'CN':
+            todos = CPcells_CN.objects.all()
+            serializer = CPcellsSerializerCN(todos, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -320,6 +362,9 @@ class CPcellsApiView(APIView):
         elif region == 'AP':
             controlpoints = Controlpoints_AP
             cp_cells = CPcells_AP.objects.all()
+        elif region == 'CN':
+            controlpoints = Controlpoints_CN
+            cp_cells = CPcells_CN.objects.all()
 
 
         #Store 4 conrtrol points for each cell
@@ -366,7 +411,9 @@ class ControlpointsStatsApiView(APIView):
     # Calculate control points statistics based on the count of integrity stations within 300 km    
     def get(self, request, *args, **kwargs):
         # List all the control points for given requested user
-        result = self.metrics_collector('EU')
+        result = self.metrics_collector('NA')
+        resultEU = self.metrics_collector('EU')
+        resultAP = self.metrics_collector('AP')
         return Response(result, status=status.HTTP_200_OK)
 
     def metrics_collector(self, region):
@@ -569,6 +616,8 @@ def find_nearest_point_of_interest(request):
 
 
 #Create a view to serve metrics
+#@api_view(['GET'])
+#@permission_classes([permissions.IsAuthenticated])
 def metrics(request):
     metrics_page = generate_latest()
     return HttpResponse(metrics_page, content_type=CONTENT_TYPE_LATEST)
