@@ -137,3 +137,9 @@ class CPcells_CN(models.Model):
     longitude = models.CharField(max_length=100, null=True)
     latitude = models.CharField(max_length=100, null=True)
     count = models.CharField(max_length=100, null=True)
+
+class Hexagon_EU(models.Model):
+    id = models.CharField(max_length=100, primary_key=True)
+    geom = models.PolygonField(srid=4326, null=True)
+    count = models.CharField(max_length=100, null=True)
+    percent = models.CharField(max_length=100, null=True)

@@ -393,8 +393,10 @@ class CPcellsApiView(APIView):
                 cp_cell.count = 1
             elif '1' in cpstatus:
                 cp_cell.count = 2
-            else:
+            elif '2' in cpstatus:
                 cp_cell.count = 3
+            else:
+                cp_cell.count = 4
 
             cp_cell.save()
 
