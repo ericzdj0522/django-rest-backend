@@ -143,3 +143,15 @@ class Hexagon_EU(models.Model):
     geom = models.PolygonField(srid=4326, null=True)
     count = models.CharField(max_length=100, null=True)
     percent = models.CharField(max_length=100, null=True)
+
+class Controlpoint_summary(models.Model):
+    level1_time_na = models.IntegerField(default=0)
+    level1_time_eu = models.IntegerField(default=0)
+    level1_time_ap = models.IntegerField(default=0)
+    level2_time_na = models.IntegerField(default=0)
+    level2_time_eu = models.IntegerField(default=0)
+    level2_time_ap = models.IntegerField(default=0)
+    level3_time_na = models.IntegerField(default=0)
+    level3_time_eu = models.IntegerField(default=0)
+    level3_time_ap = models.IntegerField(default=0)
+    recorded_time = models.CharField(max_length=100, null=True)
